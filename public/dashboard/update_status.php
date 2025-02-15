@@ -1,34 +1,39 @@
 <?php
 session_start();
-if (!isset($_SESSION['user_id'])) {
-    die(json_encode(["error" => "Unauthorized"]));
-}
-
 require_once '../../app/config/config.php';
 require_once '../../app/core/database.php';
 
-if (!isset($_POST['id']) || !isset($_POST['status'])) {
-    die(json_encode(["error" => "Invalid request"]));
+if (!isset($_SESSION['user_id'])) {
+    echo json_encode(['success' => false, 'error' => 'Unauthorized']);
+    exit();
 }
 
 $conn = getConnection();
-$id = $_POST['id'];
-$status = $_POST['status'];
-$user_id = $_SESSION['user_id'];
 
-// Validasi status hanya bisa 'draft' atau 'published'
-if (!in_array($status, ['draft', 'published'])) {
-    die(json_encode(["error" => "Invalid status"]));
-}
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['id'], $_POST['status'])) {
+    $id = $_POST['id'];
+    $status = $_POST['status'];
+    $user_id = $_SESSION['user_id'];
 
-// Jika status diubah ke 'published', atur `published_at`, jika 'draft' kosongkan
-$published_at = ($status === 'published') ? date('Y-m-d H:i:s') : null;
+    // Ambil status sebelumnya
+    $stmt = $conn->prepare("SELECT status FROM posts WHERE id = ? AND user_id = ?");
+    $stmt->execute([$id, $user_id]);
+    $article = $stmt->fetch(PDO::FETCH_ASSOC);
 
-try {
-    $stmt = $conn->prepare("UPDATE posts SET status = ?, published_at = ? WHERE id = ? AND user_id = ?");
-    $stmt->execute([$status, $published_at, $id, $user_id]);
+    if (!$article) {
+        echo json_encode(['success' => false, 'error' => 'Article not found']);
+        exit();
+    }
 
-    echo json_encode(["success" => true, "status" => $status, "published_at" => $published_at]);
-} catch (PDOException $e) {
-    echo json_encode(["error" => $e->getMessage()]);
+    // Perbarui status artikel
+    $stmt = $conn->prepare("UPDATE posts SET status = ?, published_at = (CASE WHEN ? = 'published' THEN NOW() ELSE NULL END) WHERE id = ? AND user_id = ?");
+    $stmt->execute([$status, $status, $id, $user_id]);
+
+    // Catat perubahan status ke riwayat status
+    $stmt = $conn->prepare("INSERT INTO post_status_history (post_id, status) VALUES (?, ?)");
+    $stmt->execute([$id, $status]);
+
+    echo json_encode(['success' => true]);
+} else {
+    echo json_encode(['success' => false, 'error' => 'Invalid request']);
 }
