@@ -42,9 +42,9 @@ $articles = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <tr>
                     <th>Title</th>
                     <th>Image</th>
-                    <th>Created At</th>
                     <th>Status</th>
-                    <th>Published At</th> <!-- ✅ Kolom Baru -->
+                    <th>Created At</th>
+                    <th>Published At</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -59,9 +59,7 @@ $articles = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 No Image
                             <?php endif; ?>
                         </td>
-                        <td><?php echo $article['created_at']; ?></td>
 
-                        <!-- ✅ Tambahkan Dropdown Edit Status -->
                         <td>
                             <select class="form-select status-dropdown" data-id="<?php echo $article['id']; ?>">
                                 <option value="draft" <?php if ($article['status'] == 'draft') echo 'selected'; ?>>Draft</option>
@@ -69,7 +67,8 @@ $articles = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             </select>
                         </td>
 
-                        <!-- ✅ Kolom Baru untuk Published At -->
+                        <td><?php echo $article['created_at']; ?></td>
+
                         <td class="published-at">
                             <?php echo $article['published_at'] ? date('F j, Y, g:i a', strtotime($article['published_at'])) : '-'; ?>
                         </td>
