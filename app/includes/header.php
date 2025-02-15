@@ -45,7 +45,7 @@
                                 </a>
                                 <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end">
                                     <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'author'): ?>
-                                        <li><a class="dropdown-item" href="/KPL2025_B_V2/public/dashboard/index.php">Dashboard</a></li>
+                                        <li><a class="dropdown-item" href="/KPL_2025_B/public/dashboard/index.php">Dashboard</a></li>
                                     <?php endif; ?>
                                     <li><a class="dropdown-item" href="../app/auth/logout.php">Logout</a></li>
                                 </ul>

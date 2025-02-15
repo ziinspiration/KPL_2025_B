@@ -92,13 +92,16 @@ $articles = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 <span class="text-muted">No Image</span>
                             <?php endif; ?>
                         </td>
+
                         <td>
                             <select class="form-select status-dropdown" data-id="<?php echo $article['id']; ?>">
                                 <option value="draft" <?php if ($article['status'] == 'draft') echo 'selected'; ?>>Draft</option>
                                 <option value="published" <?php if ($article['status'] == 'published') echo 'selected'; ?>>Published</option>
                             </select>
                         </td>
+                      
                         <td><?php echo $article['created_at']; ?></td>
+
                         <td class="published-at">
                             <?php echo $article['published_at'] ? date('F j, Y, g:i a', strtotime($article['published_at'])) : '-'; ?>
                         </td>
