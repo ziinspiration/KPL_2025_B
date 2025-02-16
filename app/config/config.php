@@ -1,5 +1,5 @@
 <?php
-define('BASEURL', 'http://localhost/KPL2025_B_V3/public');
+define('BASEURL', 'http://localhost/KPL_2025_B/public');
 define('DB_HOST', 'localhost');
 define('DB_USER', 'root');
 define('DB_PASS', '');

@@ -231,14 +231,23 @@ class Posts extends Controller
 
             $result = $this->posts_model->updatePostStatus($id, $status, $user_id);
 
-            $this->posts_model->saveRevision(
-                $article['id'],
-                $user_id,
-                $article['title'],
-                $article['content'],
-                $article['image'],
-                $status
-            );
+            if (isset($article['id'], $article['title'], $article['content'], $article['image'])) {
+
+                $this->posts_model->saveRevision(
+                    $article['id'],
+                    $user_id,
+                    $article['title'],
+                    $article['content'],
+                    $article['image'],
+                    $article['title'],
+                    $article['content'],
+                    $article['keywords'],
+                    $article['image'],
+                    $status
+                );
+            } else {
+                error_log("Data artikel tidak lengkap untuk menyimpan revisi.");
+            }
 
             if ($result) {
                 $_SESSION['success_message'] = "Status artikel berhasil diperbarui.";
@@ -297,6 +306,10 @@ class Posts extends Controller
             $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
         }
 
+        $keywordsArray = json_decode($article['keywords'], true);
+        $article['keywords_string'] = implode(" ", $keywordsArray);
+
+
         $data['article'] = $article;
         $data['title'] = "Edit Article";
         $data['csrf_token'] = $_SESSION['csrf_token'];
@@ -309,6 +322,8 @@ class Posts extends Controller
     public function processEdit()
     {
         $this->requireAuthorRole();
+
+        error_log("processEdit - Awal fungsi");
 
         if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             if (
@@ -323,6 +338,9 @@ class Posts extends Controller
             $id = $this->sanitizeInput($_POST['id']);
             $user_id = $_SESSION['user_id'];
 
+            error_log("processEdit - ID Artikel: " . $id);
+            error_log("processEdit - User ID: " . $user_id);
+
             $article = $this->posts_model->getPostByIdAndUserId($id, $user_id);
 
             if (!$article) {
@@ -331,44 +349,58 @@ class Posts extends Controller
                 exit();
             }
 
-            $title = $this->sanitizeInput($_POST['title']);
-            $content = htmlspecialchars($_POST['content'], ENT_QUOTES, 'UTF-8');
-            $keywords = $this->sanitizeInput($_POST['keywords']);
+            error_log("processEdit - Data artikel berhasil diambil dari database");
 
-            $image = $article['image'];
+            $newTitle = $this->sanitizeInput($_POST['title']);
+            $newContent = htmlspecialchars($_POST['content'], ENT_QUOTES, 'UTF-8');
+            $newKeywords = $this->sanitizeInput($_POST['keywords']);
+
+            $newKeywordsArray = array_map([$this, 'sanitizeInput'], explode(" ", $newKeywords));
+            $newKeywordsJson = json_encode(array_filter($newKeywordsArray));
+
+            $newImage = $article['image'];
             if (!empty($_FILES['image']['name'])) {
                 $uploadResult = $this->uploadImage($_FILES['image']);
                 if ($uploadResult) {
-                    $image = $uploadResult;
+                    $newImage = $uploadResult;
                 } else {
                     header("Location: " . BASEURL . "/posts/edit/" . $article['slug']);
                     exit();
                 }
             }
-            $keywordsArray = array_map([$this, 'sanitizeInput'], explode(" ", $keywords));
-            $keywordsJson = json_encode(array_filter($keywordsArray));
 
-            error_log("processEdit - Tepat SEBELUM memanggil saveRevision");
+            error_log("processEdit - Perubahan:");
+            error_log("processEdit - Judul baru: " . $newTitle);
+            error_log("processEdit - Konten baru: " . substr($newContent, 0, 100) . "...");
+            error_log("processEdit - Keywords baru: " . $newKeywordsJson);
+            error_log("processEdit - Image baru: " . $newImage);
+
+            error_log("processEdit - Memanggil saveRevision()");
             $revision_saved = $this->posts_model->saveRevision(
                 $article['id'],
                 $user_id,
                 $article['title'],
                 $article['content'],
                 $article['image'],
+                $newTitle,
+                $newContent,
+                $newKeywordsJson,
+                $newImage,
                 $article['status']
             );
-            error_log("processEdit - Tepat SESUDAH memanggil saveRevision");
-
+            error_log("processEdit - saveRevision() selesai dieksekusi, Hasil: " . ($revision_saved ? 'Berhasil' : 'Gagal'));
 
             try {
+                error_log("processEdit - Memanggil updatePost()");
                 $updated = $this->posts_model->updatePost(
                     $article['id'],
                     $user_id,
-                    $title,
-                    $content,
-                    $keywordsJson,
-                    $image
+                    $newTitle,
+                    $newContent,
+                    $newKeywordsJson,
+                    $newImage
                 );
+                error_log("processEdit - updatePost() selesai dieksekusi, Hasil: " . ($updated ? 'Berhasil' : 'Gagal'));
 
                 if ($updated) {
                     $_SESSION['success_message'] = "Artikel berhasil diperbarui!";
@@ -384,6 +416,7 @@ class Posts extends Controller
                 exit();
             }
         }
+        error_log("processEdit - Selesai (bukan POST)");
         header("Location: " . BASEURL . "/posts/index");
         exit();
     }
