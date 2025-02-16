@@ -85,9 +85,9 @@ class Posts_model
             $this->db->beginTransaction();
 
             $query = "UPDATE " . $this->table . "
-                  SET status = :status,
-                      published_at = (CASE WHEN :status = 'published' THEN NOW() ELSE NULL END)
-                  WHERE id = :id AND user_id = :user_id";
+                      SET status = :status,
+                          published_at = (CASE WHEN :status = 'published' THEN NOW() ELSE NULL END)
+                      WHERE id = :id AND user_id = :user_id";
 
             $this->db->query($query);
             $this->db->bind(':status', $status, PDO::PARAM_STR);
@@ -105,8 +105,11 @@ class Posts_model
                 return false;
             }
 
-            $query_insert = "INSERT INTO post_status_history (post_id, status, changed_at) VALUES (:post_id, :status, NOW())";
+            $historyId = uniqid('history_', true);
+
+            $query_insert = "INSERT INTO post_status_history (id, post_id, status, changed_at) VALUES (:history_id, :post_id, :status, NOW())";
             $this->db->query($query_insert);
+            $this->db->bind(':history_id', $historyId, PDO::PARAM_STR);  // Bind ID unik
             $this->db->bind(':post_id', $id, PDO::PARAM_STR);
             $this->db->bind(':status', $status, PDO::PARAM_STR);
 
@@ -145,19 +148,46 @@ class Posts_model
         }
     }
 
-    public function saveRevision($post_id, $user_id, $old_title, $old_content, $old_image, $new_status)
-    {
-        error_log("saveRevision - post_id: " . $post_id . ", user_id: " . $user_id . ", old_title: " . $old_title . ", old_content: " . $old_content . ", old_image: " . $old_image . ", new_status: " . $new_status);
+    public function saveRevision(
+        $post_id,
+        $user_id,
+        $old_title,
+        $old_content,
+        $old_image,
+        $new_title,
+        $new_content,
+        $new_keywords,
+        $new_image,
+        $new_status
+    ) {
+        error_log("saveRevision - Dipanggil dengan data:");
+        error_log("saveRevision - post_id: " . $post_id);
+        error_log("saveRevision - user_id: " . $user_id);
+        error_log("saveRevision - old_title: " . $old_title);
+        error_log("saveRevision - old_content: " . strlen($old_content) . " characters");
+        error_log("saveRevision - old_image: " . $old_image);
+        error_log("saveRevision - new_title: " . $new_title);
+        error_log("saveRevision - new_content: " . strlen($new_content) . " characters");
+        error_log("saveRevision - new_keywords: " . $new_keywords);
+        error_log("saveRevision - new_image: " . $new_image);
+        error_log("saveRevision - new_status: " . $new_status);
 
-        $query = "INSERT INTO revisions (post_id, user_id, old_title, old_content, old_image, revised_at, type, new_status)
-              VALUES (:post_id, :user_id, :old_title, :old_content, :old_image, NOW(), 'Content Change', :new_status)";
+
+        $query = "INSERT INTO revisions (id, post_id, user_id, old_title, old_content, old_image, new_title, new_content, new_keywords, new_image, revised_at, type, new_status)
+                  VALUES (:id, :post_id, :user_id, :old_title, :old_content, :old_image, :new_title, :new_content, :new_keywords, :new_image, NOW(), 'Content Change', :new_status)";
 
         $this->db->query($query);
+
+        $this->db->bind(':id', uniqid('rev_', true), PDO::PARAM_STR);
         $this->db->bind(':post_id', $post_id, PDO::PARAM_STR);
         $this->db->bind(':user_id', $user_id, PDO::PARAM_STR);
         $this->db->bind(':old_title', $old_title, PDO::PARAM_STR);
         $this->db->bind(':old_content', $old_content, PDO::PARAM_STR);
         $this->db->bind(':old_image', $old_image, PDO::PARAM_STR);
+        $this->db->bind(':new_title', $new_title, PDO::PARAM_STR);
+        $this->db->bind(':new_content', $new_content, PDO::PARAM_STR);
+        $this->db->bind(':new_keywords', $new_keywords, PDO::PARAM_STR);
+        $this->db->bind(':new_image', $new_image, PDO::PARAM_STR);
         $this->db->bind(':new_status', $new_status, PDO::PARAM_STR);
 
         $this->db->debugDumpParams();
@@ -165,17 +195,17 @@ class Posts_model
         try {
             $result = $this->db->execute();
             if ($result) {
-                error_log("Eksekusi query saveRevision berhasil!");
+                error_log("saveRevision - Eksekusi query saveRevision berhasil!");
                 return true;
             } else {
                 $errorInfo = $this->db->errorInfo();
                 $errorMessage = isset($errorInfo[2]) ? $errorInfo[2] : 'Unknown error';
-                error_log("Eksekusi query saveRevision gagal. Error: " .  $errorMessage);
-                error_log("SQLSTATE: " . $errorInfo[0] . ", Error Code: " . $errorInfo[1]);
+                error_log("saveRevision - Eksekusi query saveRevision gagal. Error: " .  $errorMessage);
+                error_log("saveRevision - SQLSTATE: " . $errorInfo[0] . ", Error Code: " . $errorInfo[1]);
                 return false;
             }
         } catch (PDOException $e) {
-            error_log("PDOException dalam saveRevision: " . $e->getMessage());
+            error_log("saveRevision - PDOException dalam saveRevision: " . $e->getMessage());
             return false;
         }
     }
